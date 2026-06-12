@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expert Radiology – Signature Generator</title>
+
+  <!-- Cropper.js for headshot cropping -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand-dark:  #1b3a6b;
+      --brand-blue:  #2e6da4;
+      --brand-light: #e8f1fb;
+      --accent:      #e05c00;
+      --bg:          #f4f6f9;
+      --card:        #ffffff;
+      --border:      #d0d8e4;
+      --text:        #1a1a2e;
+      --muted:       #6b7280;
+      --radius:      10px;
+      --shadow:      0 2px 12px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      background: var(--brand-dark);
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: .3px; }
+    header span { font-size: .9rem; opacity: .7; }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
+      padding: 28px 32px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* ── Card ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-header {
+      background: var(--brand-light);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      font-weight: 600;
+      font-size: .95rem;
+      color: var(--brand-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-body { padding: 20px; }
+
+    /* ── Form controls ───────────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 5px;
+    }
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: .95rem;
+      color: var(--text);
+      transition: border-color .2s;
+    }
+    input:focus { outline: none; border-color: var(--brand-blue); }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .toggle-row label { font-size: .9rem; color: var(--text); cursor: pointer; }
+
+    /* toggle switch */
+    .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: #ccc; border-radius: 24px;
+      cursor: pointer; transition: .25s;
+    }
+    .slider::before {
+      content: ""; position: absolute;
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%;
+      transition: .25s;
+    }
+    input:checked + .slider { background: var(--brand-blue); }
+    input:checked + .slider::before { transform: translateX(18px); }
+
+    /* range slider */
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .range-row span { font-size: .82rem; min-width: 32px; text-align: right; color: var(--muted); }
+    .range-row label { font-size: .82rem; min-width: 84px; color: var(--muted); }
+    input[type="range"] { flex: 1; accent-color: var(--brand-blue); }
+    .btn-reset {
+      background: none; border: 1px solid var(--border);
+      border-radius: 5px; padding: 2px 7px;
+      font-size: .75rem; cursor: pointer; color: var(--muted);
+      transition: border-color .15s, color .15s;
+      flex-shrink: 0;
+    }
+    .btn-reset:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+
+    /* ── Upload zones ────────────────────────────────────────────── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: #fafbfc;
+      position: relative;
+    }
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--brand-blue);
+      background: var(--brand-light);
+    }
+    .dropzone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .dropzone-icon { font-size: 2rem; margin-bottom: 6px; }
+    .dropzone p { font-size: .82rem; color: var(--muted); }
+    .dropzone .filename { font-size: .78rem; color: var(--brand-blue); margin-top: 4px; font-weight: 600; }
+
+    /* thumbnail strip */
+    .thumb-wrap {
+      position: relative; display: inline-block; margin-top: 10px;
+    }
+    .thumb-wrap img {
+      max-width: 100%; max-height: 110px;
+      border-radius: 6px; border: 1px solid var(--border);
+      display: block;
+    }
+    .btn-clear {
+      position: absolute; top: -8px; right: -8px;
+      background: #e53e3e; color: #fff;
+      border: none; border-radius: 50%;
+      width: 22px; height: 22px;
+      cursor: pointer; font-size: .75rem; line-height: 22px;
+      text-align: center;
+    }
+
+    /* ── Crop modal ──────────────────────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: var(--radius);
+      padding: 24px; width: 90vw; max-width: 700px;
+      max-height: 90vh; overflow: auto;
+    }
+    .modal h3 { margin-bottom: 14px; color: var(--brand-dark); }
+    .modal .crop-container { max-height: 380px; overflow: hidden; }
+    .modal .crop-container img { max-width: 100%; display: block; }
+    .modal-footer { display: flex; gap: 10px; margin-top: 14px; justify-content: flex-end; }
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    .btn {
+      padding: 9px 20px;
+      border: none; border-radius: 7px;
+      font-size: .9rem; font-weight: 600;
+      cursor: pointer; transition: opacity .2s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary   { background: var(--brand-dark); color: #fff; }
+    .btn-blue      { background: var(--brand-blue); color: #fff; }
+    .btn-accent    { background: var(--accent); color: #fff; }
+    .btn-ghost     { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn:disabled  { opacity: .45; cursor: not-allowed; }
+    .btn-sm        { padding: 5px 12px; font-size: .8rem; }
+    .btn-full      { width: 100%; margin-top: 8px; }
+
+    /* ── Preview panel ───────────────────────────────────────────── */
+    .preview-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .preview-box {
+      min-height: 320px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .preview-box img { max-width: 100%; display: block; }
+    .preview-placeholder {
+      text-align: center; color: var(--muted); padding: 40px;
+    }
+    .preview-placeholder .icon { font-size: 3rem; margin-bottom: 10px; }
+
+    /* action bar */
+    .action-bar {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+
+    /* status toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--brand-dark); color: #fff;
+      padding: 10px 18px; border-radius: 8px;
+      font-size: .9rem; box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      z-index: 2000; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #c53030; }
+
+    /* ── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; padding: 16px; }
+    }
+
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .section-title {
+      font-size: .78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .6px;
+      color: var(--muted); margin-bottom: 10px;
+    }
+
+    /* spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+  </style>
+</head>
+
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<header>
+  <div>
+    <h1>Expert Radiology™ — Signature Generator</h1>
+    <span>Local microservice · data stays on your machine</span>
+  </div>
+</header>
+
+<!-- ── Main layout ──────────────────────────────────────────────────────── -->
+<div class="app">
+
+  <!-- ── LEFT COLUMN: controls ───────────────────────────────────────────── -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <!-- Doctor info -->
+    <div class="card">
+      <div class="card-header">👤 Doctor Information</div>
+      <div class="card-body">
+
+        <div class="field">
+          <label>Full Name (without "MD")</label>
+          <input type="text" id="inp-name" placeholder="Syed Adil Aftab" value="" />
+        </div>
+
+        <div class="field">
+          <label>Clinical Title</label>
+          <input type="text" id="inp-title" placeholder="Neuroradiologist" value="" />
+        </div>
+
+        <div class="toggle-row">
+          <label class="switch">
+            <input type="checkbox" id="chk-board" />
+            <span class="slider"></span>
+          </label>
+          <label for="chk-board">Board Certified (Diagnostic Radiology, ABR)</label>
+        </div>
+
+        <div class="field">
+          <label>Fellowship Specialization</label>
+          <input type="text" id="inp-spec" placeholder="Neuroradiology" value="" />
+        </div>
+
+        <div class="field">
+          <label>University / Study Center</label>
+          <input type="text" id="inp-univ" placeholder="University of Chicago Medical Center" value="" />
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Signature image -->
+    <div class="card">
+      <div class="card-header">✍️ Signature Image</div>
+      <div class="card-body">
+        <div class="dropzone" id="dz-sig">
+          <input type="file" id="file-sig" accept="image/*" />
+          <div class="dropzone-icon">🖊️</div>
+          <p>Drop signature image here or click to browse</p>
+          <div class="filename" id="fname-sig"></div>
+        </div>
+        <div id="preview-sig-wrap" class="hidden" style="text-align:center; margin-top:10px;">
+          <div class="thumb-wrap">
+            <img id="preview-sig" src="" alt="signature preview" />
+            <button class="btn-clear" onclick="clearSlot('signature')">✕</button>
+          </div>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-title">Adjustments</div>
+        <div class="range-row">
+          <label>Contrast</label>
+          <input type="range" id="sig-contrast" min="0.5" max="3" step="0.05" value="1" />
+          <span id="sig-contrast-val">1.00</span>
+          <button class="btn-reset" onclick="resetRange('sig-contrast','sig-contrast-val',1)">↺</button>
+        </div>
+        <div class="range-row">
+          <label>Brightness</label>
+          <input type="range" id="sig-brightness" min="0.3" max="2" step="0.05" value="1" />
+          <span id="sig-brightness-val">1.00</span>
+          <button class="btn-reset" onclick="resetRange('sig-brightness','sig-brightness-val',1)">↺</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Headshot -->
+    <div class="card">
+      <div class="card-header">📸 Headshot Photo</div>
+      <div class="card-body">
+        <div class="dropzone" id="dz-head">
+          <input type="file" id="file-head" accept="image/*" />
+          <div class="dropzone-icon">🧑‍⚕️</div>
+          <p>Drop headshot here or click to browse</p>
+          <div class="filename" id="fname-head"></div>
+        </div>
+        <div id="preview-head-wrap" class="hidden" style="text-align:center; margin-top:10px;">
+          <div class="thumb-wrap">
+            <img id="preview-head" src="" alt="headshot preview" />
+            <button class="btn-clear" onclick="clearSlot('headshot')">✕</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="openCropModal()">✂️ Crop / Adjust</button>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-title">Color Adjustments</div>
+        <div class="range-row">
+          <label>Brightness</label>
+          <input type="range" id="head-brightness" min="0.3" max="2" step="0.05" value="1" />
+          <span id="head-brightness-val">1.00</span>
+          <button class="btn-reset" onclick="resetRange('head-brightness','head-brightness-val',1)">↺</button>
+        </div>
+        <div class="range-row">
+          <label>Saturation</label>
+          <input type="range" id="head-saturation" min="0" max="3" step="0.05" value="1" />
+          <span id="head-saturation-val">1.00</span>
+          <button class="btn-reset" onclick="resetRange('head-saturation','head-saturation-val',1)">↺</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="card">
+      <div class="card-header">🏥 Expert Radiology Logo</div>
+      <div class="card-body">
+        <div id="logo-default-notice" style="
+          background: #f0f7ee; border: 1px solid #b7dcb3;
+          border-radius: 7px; padding: 10px 14px;
+          font-size: .85rem; color: #2d6a27; margin-bottom: 12px;">
+          ✅ <strong>Logo incluido por defecto</strong> — se carga automáticamente desde <code>assets/logo.png</code>.
+          Solo sube una imagen aquí si quieres reemplazarlo temporalmente.
+        </div>
+        <div class="dropzone" id="dz-logo">
+          <input type="file" id="file-logo" accept="image/*" />
+          <div class="dropzone-icon">🖼️</div>
+          <p>Opcional: arrastra aquí para reemplazar el logo</p>
+          <div class="filename" id="fname-logo"></div>
+        </div>
+        <div id="preview-logo-wrap" class="hidden" style="text-align:center; margin-top:10px;">
+          <div class="thumb-wrap">
+            <img id="preview-logo" src="" alt="logo preview" />
+            <button class="btn-clear" onclick="clearSlot('logo')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end left column -->
+
+  <!-- ── RIGHT COLUMN: preview ────────────────────────────────────────────── -->
+  <div class="preview-panel">
+    <div class="card">
+      <div class="card-header">👁️ Live Preview</div>
+      <div class="card-body" style="padding: 14px;">
+        <div class="preview-box" id="preview-box">
+          <div class="preview-placeholder" id="preview-placeholder">
+            <div class="icon">🖼️</div>
+            <p>Fill in the fields and click <strong>Preview</strong><br>to see the signature</p>
+          </div>
+          <img id="preview-img" src="" alt="signature preview" class="hidden" />
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-blue" id="btn-preview" onclick="doPreview()">
+        👁️ Preview
+      </button>
+      <button class="btn btn-accent" id="btn-generate" onclick="doGenerate()">
+        ⬇️ Generate &amp; Download JPG
+      </button>
+    </div>
+
+    <!-- Info card -->
+    <div class="card">
+      <div class="card-header">ℹ️ Generated Signature Format</div>
+      <div class="card-body" style="font-size:.88rem; color:var(--muted); line-height:1.7;">
+        <strong style="color:var(--text);">[Name], MD</strong><br>
+        Clinical [Title], Expert Radiology™<br>
+        <em>Board Certified, Diagnostic Radiology, American Board of Radiology</em>
+        <span style="color:var(--accent);"> ← only shown when toggle is ON</span><br>
+        Fellowship trained in [Specialization], [University]
+      </div>
+    </div>
+  </div><!-- end right column -->
+
+</div><!-- end .app -->
+
+<!-- ── Crop modal ──────────────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="crop-modal">
+  <div class="modal">
+    <h3>✂️ Crop Headshot</h3>
+    <div class="crop-container">
+      <img id="crop-img" src="" alt="crop source" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCropModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="applyCrop()">Apply Crop</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── Scripts ────────────────────────────────────────────────────────────── -->
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+const state = {
+  headshot_crop: null,      // {x,y,width,height} from Cropper.js
+  headshot_raw_src: null,   // original src for crop modal
+};
+let cropperInstance = null;
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isError ? " error" : "");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = "toast"; }, 3000);
+}
+
+// ── Range sliders ─────────────────────────────────────────────────────────
+function bindRange(id, valId) {
+  const el = document.getElementById(id);
+  const out = document.getElementById(valId);
+  const update = () => { out.textContent = parseFloat(el.value).toFixed(2); };
+  el.addEventListener("input", update);
+  update();
+}
+bindRange("sig-contrast",    "sig-contrast-val");
+bindRange("sig-brightness",  "sig-brightness-val");
+bindRange("head-brightness", "head-brightness-val");
+bindRange("head-saturation", "head-saturation-val");
+
+function resetRange(rangeId, valId, defaultVal) {
+  const el = document.getElementById(rangeId);
+  el.value = defaultVal;
+  document.getElementById(valId).textContent = parseFloat(defaultVal).toFixed(2);
+}
+
+// ── File upload ───────────────────────────────────────────────────────────
+function setupDropzone(dzId, fileId, slot, previewImgId, previewWrapId, fnameId) {
+  const fileEl  = document.getElementById(fileId);
+  const dzEl    = document.getElementById(dzId);
+
+  dzEl.addEventListener("dragover",  e => { e.preventDefault(); dzEl.classList.add("drag-over"); });
+  dzEl.addEventListener("dragleave", () => dzEl.classList.remove("drag-over"));
+  dzEl.addEventListener("drop", e => {
+    e.preventDefault();
+    dzEl.classList.remove("drag-over");
+    const f = e.dataTransfer.files[0];
+    if (f) uploadFile(slot, f, previewImgId, previewWrapId, fnameId);
+  });
+  fileEl.addEventListener("change", () => {
+    if (fileEl.files[0])
+      uploadFile(slot, fileEl.files[0], previewImgId, previewWrapId, fnameId);
+  });
+}
+
+async function uploadFile(slot, file, previewImgId, previewWrapId, fnameId) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(`/api/upload/${slot}`, { method: "POST", body: fd });
+  const data = await res.json();
+  if (data.error) { showToast(data.error, true); return; }
+
+  document.getElementById(fnameId).textContent = file.name;
+  const src = "data:image/jpeg;base64," + data.preview;
+  const imgEl  = document.getElementById(previewImgId);
+  const wrapEl = document.getElementById(previewWrapId);
+  imgEl.src = src;
+  wrapEl.classList.remove("hidden");
+
+  if (slot === "headshot") {
+    state.headshot_raw_src = src;
+    state.headshot_crop = null;
+  }
+  showToast(`${slot.charAt(0).toUpperCase()+slot.slice(1)} uploaded ✓`);
+}
+
+setupDropzone("dz-sig",  "file-sig",  "signature", "preview-sig",  "preview-sig-wrap",  "fname-sig");
+setupDropzone("dz-head", "file-head", "headshot",  "preview-head", "preview-head-wrap", "fname-head");
+setupDropzone("dz-logo", "file-logo", "logo",      "preview-logo", "preview-logo-wrap", "fname-logo");
+
+// ── Clear slot ────────────────────────────────────────────────────────────
+async function clearSlot(slot) {
+  await fetch(`/api/clear/${slot}`, { method: "DELETE" });
+  const map = {
+    signature: ["preview-sig",  "preview-sig-wrap",  "fname-sig"],
+    headshot:  ["preview-head", "preview-head-wrap", "fname-head"],
+    logo:      ["preview-logo", "preview-logo-wrap", "fname-logo"],
+  };
+  const [imgId, wrapId, fnameId] = map[slot];
+  document.getElementById(imgId).src = "";
+  document.getElementById(wrapId).classList.add("hidden");
+  document.getElementById(fnameId).textContent = "";
+  if (slot === "headshot") state.headshot_crop = null;
+  showToast(`${slot} removed`);
+}
+
+// ── Collect form data ─────────────────────────────────────────────────────
+function getFormData() {
+  return {
+    name:         document.getElementById("inp-name").value.trim(),
+    title:        document.getElementById("inp-title").value.trim(),
+    board_certified: document.getElementById("chk-board").checked,
+    specialization: document.getElementById("inp-spec").value.trim(),
+    university:   document.getElementById("inp-univ").value.trim(),
+    sig_contrast:    parseFloat(document.getElementById("sig-contrast").value),
+    sig_brightness:  parseFloat(document.getElementById("sig-brightness").value),
+    headshot_crop:   state.headshot_crop,
+    headshot_brightness: parseFloat(document.getElementById("head-brightness").value),
+    headshot_saturation: parseFloat(document.getElementById("head-saturation").value),
+  };
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────
+async function doPreview() {
+  const btn = document.getElementById("btn-preview");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  try {
+    const res  = await fetch("/api/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(getFormData()),
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); return; }
+    const img = document.getElementById("preview-img");
+    img.src = "data:image/jpeg;base64," + data.image;
+    img.classList.remove("hidden");
+    document.getElementById("preview-placeholder").classList.add("hidden");
+  } catch(e) { showToast("Error: " + e.message, true); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = "👁️ Preview";
+  }
+}
+
+// ── Generate & Download ───────────────────────────────────────────────────
+async function doGenerate() {
+  const btn = document.getElementById("btn-generate");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  try {
+    const res  = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(getFormData()),
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); return; }
+
+    // Show in preview
+    const img = document.getElementById("preview-img");
+    img.src = "data:image/jpeg;base64," + data.image;
+    img.classList.remove("hidden");
+    document.getElementById("preview-placeholder").classList.add("hidden");
+
+    // Trigger download
+    const link = document.createElement("a");
+    link.href = "data:image/jpeg;base64," + data.image;
+    link.download = data.filename || "signature.jpg";
+    link.click();
+    showToast("✅ Signature downloaded!");
+  } catch(e) { showToast("Error: " + e.message, true); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = "⬇️ Generate &amp; Download JPG";
+  }
+}
+
+// ── Crop modal ────────────────────────────────────────────────────────────
+function openCropModal() {
+  if (!state.headshot_raw_src) { showToast("Upload a headshot first", true); return; }
+  const modal = document.getElementById("crop-modal");
+  const cropImg = document.getElementById("crop-img");
+  cropImg.src = state.headshot_raw_src;
+
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+
+  modal.classList.add("open");
+
+  // Wait for image to load before initialising Cropper
+  cropImg.onload = () => {
+    cropperInstance = new Cropper(cropImg, {
+      aspectRatio: 1,      // square headshot
+      viewMode: 1,
+      autoCropArea: 0.85,
+    });
+  };
+  // If already loaded
+  if (cropImg.complete) cropImg.onload();
+}
+
+function closeCropModal() {
+  document.getElementById("crop-modal").classList.remove("open");
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+}
+
+function applyCrop() {
+  if (!cropperInstance) { closeCropModal(); return; }
+  const d = cropperInstance.getData(true); // rounded integers
+  // The server receives the crop relative to the ORIGINAL uploaded image.
+  // Cropper operates on the preview (resized to ≤400px).
+  // We store the ratio so the server can scale correctly.
+  // However, since we upload the original and the server has it, let's
+  // pass the canvas ratio.
+  const cropImg = document.getElementById("crop-img");
+  const naturalW = cropperInstance.getImageData().naturalWidth;
+  const displayW = cropperInstance.getImageData().width;
+  const scale = naturalW / displayW;
+
+  state.headshot_crop = {
+    x: Math.round(d.x * scale),
+    y: Math.round(d.y * scale),
+    width:  Math.round(d.width  * scale),
+    height: Math.round(d.height * scale),
+  };
+
+  // Show cropped thumbnail (square)
+  const canvas = cropperInstance.getCroppedCanvas({ width: 200, height: 200 });
+  document.getElementById("preview-head").src = canvas.toDataURL("image/jpeg");
+
+  closeCropModal();
+  showToast("Crop applied ✓ — click Preview to update");
+}
+
+// ── Keyboard shortcut ─────────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeCropModal();
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") doPreview();
+});
+</script>
+</body>
+</html>
