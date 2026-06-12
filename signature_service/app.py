@@ -22,15 +22,35 @@ ASSETS_DIR = BASE_DIR / "assets"
 for d in [UPLOAD_DIR, OUTPUT_DIR, ASSETS_DIR]:
     d.mkdir(exist_ok=True)
 
-# ─── Fonts (Liberation Sans ≈ Arial) ─────────────────────────────────────────
-FONT_REGULAR = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-FONT_BOLD    = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+# ─── Fonts ────────────────────────────────────────────────────────────────────
+# Resolution order: bundled assets (Docker-safe) → Linux system → macOS system
+def _resolve_font(name: str) -> str | None:
+    candidates = [
+        BASE_DIR / "assets" / "fonts" / name,                           # bundled (primary)
+        Path(f"/usr/share/fonts/truetype/liberation/{name}"),            # Linux
+        Path(f"/usr/share/fonts/truetype/liberation2/{name}"),
+        Path(f"/Library/Fonts/{name}"),                                  # macOS
+        Path(f"/System/Library/Fonts/{name}"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return str(p)
+    return None
 
-def load_font(path, size):
-    try:
-        return ImageFont.truetype(path, size)
-    except Exception:
-        return ImageFont.load_default()
+FONT_REGULAR = _resolve_font("LiberationSans-Regular.ttf")
+FONT_BOLD    = _resolve_font("LiberationSans-Bold.ttf")
+
+def load_font(path: str | None, size: int) -> ImageFont.FreeTypeFont:
+    if path:
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            pass
+    # Last-resort: PIL default is bitmap and won't scale — raise so it's visible
+    raise RuntimeError(
+        "Could not load a scalable font. "
+        "Make sure assets/fonts/LiberationSans-*.ttf are present."
+    )
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -115,38 +135,51 @@ def paste_rgba(canvas: Image.Image, overlay: Image.Image, pos: tuple):
 def build_signature_image(data: dict) -> Image.Image:
     """
     data keys:
-      name, title, board_certified (bool), specialization, university
+      name            – full name including title (e.g. "Syed Adil Aftab, MD")
+      title           – clinical specialty (e.g. "Neuroradiologist")
+      board_certified – bool, adds the ABR line when True
+      specialization  – fellowship specialization
+      university      – training institution
       sig_contrast, sig_brightness
-      headshot_crop   (dict with x,y,width,height or null)
+      headshot_crop   – {x,y,width,height} from Cropper.js, or null
       headshot_brightness, headshot_saturation
-      canvas_width  (default 780)
+      canvas_width    – total output width in px  (default 820)
+      text_size       – base font size in px       (default 22)
+      sig_max_w       – signature image max width  (default 300)
+      sig_max_h       – signature image max height (default 130)
+      head_size       – headshot square side px    (default 210)
+      logo_max_w      – logo max width px          (default 260)
+      logo_max_h      – logo max height px         (default 100)
     """
-    CW      = int(data.get("canvas_width", 780))
-    PAD     = 36
-    SIG_MAX_W, SIG_MAX_H = 280, 110
-    HEAD_W,  HEAD_H      = 200, 200      # square headshot
-    LOGO_MAX_W, LOGO_MAX_H = 240, 90
-    TEXT_GAP = 8
+    # ── layout constants (all user-overridable)
+    CW         = int(data.get("canvas_width", 820))
+    PAD        = 36
+    TEXT_SIZE  = int(data.get("text_size",   22))
+    SIG_MAX_W  = int(data.get("sig_max_w",  300))
+    SIG_MAX_H  = int(data.get("sig_max_h",  130))
+    HEAD_SIZE  = int(data.get("head_size",  210))   # square
+    LOGO_MAX_W = int(data.get("logo_max_w", 260))
+    LOGO_MAX_H = int(data.get("logo_max_h", 100))
+    TEXT_GAP   = max(4, int(TEXT_SIZE * 0.22))   # ~22% leading — tight but readable
 
-    # ── fonts  (Arial 12 ≈ 16 px at 96 DPI; name slightly larger in bold)
-    fn   = load_font(FONT_REGULAR, 16)
-    fn_b = load_font(FONT_BOLD,    18)
-    fn_sm = load_font(FONT_REGULAR, 14)
+    # ── fonts  (name line bold, body regular; sizes scale with TEXT_SIZE)
+    fn   = load_font(FONT_REGULAR, TEXT_SIZE)
+    fn_b = load_font(FONT_BOLD,    TEXT_SIZE + 2)   # name just slightly larger
 
-    # ── build text lines
-    name      = data.get("name", "Doctor Name").strip()
-    title     = data.get("title", "Radiologist").strip()
-    board     = data.get("board_certified", False)
-    spec      = data.get("specialization", "Radiology").strip()
-    univ      = data.get("university", "University").strip()
+    # ── build text lines  (name is printed as-is — no automatic title suffix)
+    name  = data.get("name", "Doctor Name").strip()
+    title = data.get("title", "Radiologist").strip()
+    board = data.get("board_certified", False)
+    spec  = data.get("specialization", "Radiology").strip()
+    univ  = data.get("university", "University").strip()
 
     lines = [
-        (f"{name}, MD", fn_b),
-        (f"Clinical {title}, Expert Radiology™", fn),
+        (name,                                                         fn_b),  # bold, no auto-suffix
+        (f"Clinical {title}, Expert Radiology™",                      fn),
     ]
     if board:
         lines.append(("Board Certified, Diagnostic Radiology, American Board of Radiology", fn))
-    lines.append((f"Fellowship trained in {spec}, {univ}", fn))
+    lines.append((f"Fellowship trained in {spec}, {univ}",            fn))
 
     # ── measure text block height
     dummy = Image.new("RGB", (10, 10))
@@ -171,7 +204,7 @@ def build_signature_image(data: dict) -> Image.Image:
         nw, nh = int(sig_raw.width * ratio), int(sig_raw.height * ratio)
         sig_img_resized = sig_raw.resize((nw, nh), Image.LANCZOS)
 
-    # ── headshot
+    # ── headshot (always square)
     head_img = None
     head_path = find_upload("headshot")
     if head_path:
@@ -179,7 +212,7 @@ def build_signature_image(data: dict) -> Image.Image:
         head_raw = crop_and_resize(
             head_raw,
             crop=data.get("headshot_crop"),
-            target_size=(HEAD_W, HEAD_H),
+            target_size=(HEAD_SIZE, HEAD_SIZE),
         )
         head_raw = apply_enhancements(
             head_raw,
@@ -188,7 +221,7 @@ def build_signature_image(data: dict) -> Image.Image:
         )
         head_img = head_raw
 
-    # ── logo
+    # ── logo (default from assets, override via upload)
     logo_img = None
     logo_path = find_upload("logo") or (ASSETS_DIR / "logo.png" if (ASSETS_DIR / "logo.png").exists() else None)
     if logo_path and Path(logo_path).exists():
@@ -198,28 +231,27 @@ def build_signature_image(data: dict) -> Image.Image:
         logo_img = logo_raw.resize((lw, lh), Image.LANCZOS)
 
     # ── calculate canvas height
-    sig_h   = sig_img_resized.size[1] if sig_img_resized else 0
-    bottom_h = max(HEAD_H if head_img else 0, logo_img.size[1] if logo_img else 0)
+    sig_h    = sig_img_resized.size[1] if sig_img_resized else 0
+    bottom_h = max(HEAD_SIZE if head_img else 0, logo_img.size[1] if logo_img else 0)
     canvas_h = PAD + sig_h + 20 + TEXT_BLOCK_H + 30 + bottom_h + PAD
 
     # ── draw canvas
     canvas = Image.new("RGB", (CW, canvas_h), (255, 255, 255))
-
     y = PAD
 
-    # Signature
+    # Signature image
     if sig_img_resized:
         canvas = paste_rgba(canvas, sig_img_resized, (PAD, y))
         y += sig_img_resized.size[1] + 20
 
-    # Text
+    # Text block
     draw = ImageDraw.Draw(canvas)
-    for i, (text, font) in enumerate(lines):
+    for text, font in lines:
         draw.text((PAD, y), text, font=font, fill=(0, 0, 0))
         bb = draw.textbbox((PAD, y), text, font=font)
         y += (bb[3] - bb[1]) + TEXT_GAP
 
-    y += 30  # gap before bottom section
+    y += 28  # gap before bottom section
 
     # Headshot
     if head_img:
@@ -228,7 +260,7 @@ def build_signature_image(data: dict) -> Image.Image:
     # Logo – vertically centred next to headshot
     if logo_img:
         lw, lh = logo_img.size
-        logo_x = PAD + (HEAD_W + 40 if head_img else 0)
+        logo_x = PAD + (HEAD_SIZE + 40 if head_img else 0)
         logo_y = y + (bottom_h - lh) // 2
         canvas = paste_rgba(canvas, logo_img, (logo_x, logo_y))
 

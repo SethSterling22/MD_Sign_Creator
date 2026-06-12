@@ -312,8 +312,8 @@
       <div class="card-body">
 
         <div class="field">
-          <label>Full Name (without "MD")</label>
-          <input type="text" id="inp-name" placeholder="Syed Adil Aftab" value="" />
+          <label>Full Name (include title, e.g. ", MD" or ", MD, PhD")</label>
+          <input type="text" id="inp-name" placeholder="Syed Adil Aftab, MD" value="" />
         </div>
 
         <div class="field">
@@ -408,6 +408,68 @@
           <span id="head-saturation-val">1.00</span>
           <button class="btn-reset" onclick="resetRange('head-saturation','head-saturation-val',1)">↺</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Layout & Size -->
+    <div class="card">
+      <div class="card-header">📐 Layout &amp; Size</div>
+      <div class="card-body">
+
+        <div class="section-title">Canvas</div>
+        <div class="field">
+          <label>Output Width (px)</label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="number" id="inp-canvas-w" value="820" min="400" max="1600" step="10" style="max-width:110px;" />
+            <span style="font-size:.82rem; color:var(--muted);">px — ancho total de la imagen</span>
+          </div>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-title">Text</div>
+        <div class="range-row">
+          <label>Font size</label>
+          <input type="range" id="inp-text-size" min="14" max="36" step="1" value="22" />
+          <span id="inp-text-size-val">22</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <button class="btn-reset" onclick="resetRange('inp-text-size','inp-text-size-val',22)">↺</button>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-title">Signature Image</div>
+        <div class="range-row">
+          <label>Max width</label>
+          <input type="range" id="inp-sig-w" min="100" max="500" step="10" value="300" />
+          <span id="inp-sig-w-val">300</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <button class="btn-reset" onclick="resetRange('inp-sig-w','inp-sig-w-val',300)">↺</button>
+        </div>
+        <div class="range-row">
+          <label>Max height</label>
+          <input type="range" id="inp-sig-h" min="50" max="250" step="5" value="130" />
+          <span id="inp-sig-h-val">130</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <button class="btn-reset" onclick="resetRange('inp-sig-h','inp-sig-h-val',130)">↺</button>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-title">Headshot + Logo</div>
+        <div class="range-row">
+          <label>Headshot size</label>
+          <input type="range" id="inp-head-size" min="100" max="350" step="10" value="210" />
+          <span id="inp-head-size-val">210</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <button class="btn-reset" onclick="resetRange('inp-head-size','inp-head-size-val',210)">↺</button>
+        </div>
+        <div class="range-row">
+          <label>Logo max width</label>
+          <input type="range" id="inp-logo-w" min="100" max="400" step="10" value="260" />
+          <span id="inp-logo-w-val">260</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <button class="btn-reset" onclick="resetRange('inp-logo-w','inp-logo-w-val',260)">↺</button>
+        </div>
+        <div class="range-row">
+          <label>Logo max height</label>
+          <input type="range" id="inp-logo-h" min="40" max="200" step="5" value="100" />
+          <span id="inp-logo-h-val">100</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <button class="btn-reset" onclick="resetRange('inp-logo-h','inp-logo-h-val',100)">↺</button>
+        </div>
+
       </div>
     </div>
 
@@ -526,10 +588,29 @@ bindRange("sig-brightness",  "sig-brightness-val");
 bindRange("head-brightness", "head-brightness-val");
 bindRange("head-saturation", "head-saturation-val");
 
+// Layout sliders (integer values)
+function bindRangeInt(id, valId) {
+  const el = document.getElementById(id);
+  const out = document.getElementById(valId);
+  const update = () => { out.textContent = parseInt(el.value); };
+  el.addEventListener("input", update);
+  update();
+}
+bindRangeInt("inp-text-size",  "inp-text-size-val");
+bindRangeInt("inp-sig-w",      "inp-sig-w-val");
+bindRangeInt("inp-sig-h",      "inp-sig-h-val");
+bindRangeInt("inp-head-size",  "inp-head-size-val");
+bindRangeInt("inp-logo-w",     "inp-logo-w-val");
+bindRangeInt("inp-logo-h",     "inp-logo-h-val");
+
 function resetRange(rangeId, valId, defaultVal) {
   const el = document.getElementById(rangeId);
   el.value = defaultVal;
-  document.getElementById(valId).textContent = parseFloat(defaultVal).toFixed(2);
+  // use integer display for layout sliders, decimal for image adjustments
+  const isInt = Number.isInteger(defaultVal);
+  document.getElementById(valId).textContent = isInt
+    ? parseInt(defaultVal)
+    : parseFloat(defaultVal).toFixed(2);
 }
 
 // ── File upload ───────────────────────────────────────────────────────────
@@ -595,16 +676,26 @@ async function clearSlot(slot) {
 // ── Collect form data ─────────────────────────────────────────────────────
 function getFormData() {
   return {
-    name:         document.getElementById("inp-name").value.trim(),
-    title:        document.getElementById("inp-title").value.trim(),
+    // Doctor info
+    name:            document.getElementById("inp-name").value.trim(),
+    title:           document.getElementById("inp-title").value.trim(),
     board_certified: document.getElementById("chk-board").checked,
-    specialization: document.getElementById("inp-spec").value.trim(),
-    university:   document.getElementById("inp-univ").value.trim(),
-    sig_contrast:    parseFloat(document.getElementById("sig-contrast").value),
-    sig_brightness:  parseFloat(document.getElementById("sig-brightness").value),
-    headshot_crop:   state.headshot_crop,
+    specialization:  document.getElementById("inp-spec").value.trim(),
+    university:      document.getElementById("inp-univ").value.trim(),
+    // Image adjustments
+    sig_contrast:        parseFloat(document.getElementById("sig-contrast").value),
+    sig_brightness:      parseFloat(document.getElementById("sig-brightness").value),
+    headshot_crop:       state.headshot_crop,
     headshot_brightness: parseFloat(document.getElementById("head-brightness").value),
     headshot_saturation: parseFloat(document.getElementById("head-saturation").value),
+    // Layout & size
+    canvas_width: parseInt(document.getElementById("inp-canvas-w").value) || 820,
+    text_size:    parseInt(document.getElementById("inp-text-size").value),
+    sig_max_w:    parseInt(document.getElementById("inp-sig-w").value),
+    sig_max_h:    parseInt(document.getElementById("inp-sig-h").value),
+    head_size:    parseInt(document.getElementById("inp-head-size").value),
+    logo_max_w:   parseInt(document.getElementById("inp-logo-w").value),
+    logo_max_h:   parseInt(document.getElementById("inp-logo-h").value),
   };
 }
 
