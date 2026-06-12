@@ -10,6 +10,7 @@ import io
 import base64
 import json
 import math
+import re
 from pathlib import Path
 from werkzeug.utils import secure_filename
 
@@ -267,6 +268,25 @@ def build_signature_image(data: dict) -> Image.Image:
     return canvas
 
 
+# ─── Filename helper ─────────────────────────────────────────────────────────
+
+def make_filename(name: str) -> str:
+    """
+    Build a safe JPG filename from the doctor's name.
+    "Syed Adil Aftab, MD"  →  "Dr.Syed_Adil_Aftab_MD.jpg"
+    """
+    clean = name.strip()
+    clean = re.sub(r",\s*", "_", clean)          # comma + optional space → _
+    clean = re.sub(r"\s+", "_", clean)            # remaining spaces → _
+    clean = re.sub(r"[^\w._-]", "", clean)        # drop anything unsafe
+    clean = re.sub(r"_+", "_", clean).strip("_")  # collapse duplicate _
+    return f"Dr.{clean}.jpg"
+
+
+# Tracks the filename of the most recently generated signature (in-memory)
+_last_filename: str = "signature.jpg"
+
+
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -319,24 +339,27 @@ def preview():
 @app.route("/api/generate", methods=["POST"])
 def generate():
     """Generate the final high-quality JPG and return it."""
+    global _last_filename
     data = request.json or {}
     try:
-        img = build_signature_image(data)
-        out_path = OUTPUT_DIR / "signature.jpg"
+        img      = build_signature_image(data)
+        filename = make_filename(data.get("name", "Doctor"))
+        _last_filename = filename
+        out_path = OUTPUT_DIR / filename
         img.save(str(out_path), "JPEG", quality=95, subsampling=0)
         b64 = img_to_b64(img, fmt="JPEG", quality=95)
-        return jsonify({"image": b64, "filename": "signature.jpg"})
+        return jsonify({"image": b64, "filename": filename})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/download")
 def download():
-    out_path = OUTPUT_DIR / "signature.jpg"
+    out_path = OUTPUT_DIR / _last_filename
     if not out_path.exists():
         return jsonify({"error": "No signature generated yet"}), 404
-    return send_file(str(out_path), as_attachment=True, download_name="signature.jpg",
-                     mimetype="image/jpeg")
+    return send_file(str(out_path), as_attachment=True,
+                     download_name=_last_filename, mimetype="image/jpeg")
 
 
 @app.route("/api/status")
