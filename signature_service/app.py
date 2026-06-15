@@ -106,16 +106,22 @@ def apply_enhancements(img: Image.Image, contrast=1.0, brightness=1.0, saturatio
 
 
 def crop_and_resize(img: Image.Image, crop: dict | None, target_size: tuple) -> Image.Image:
-    """Apply Cropper.js coordinates then resize."""
+    """
+    Apply Cropper.js coordinates then resize to target_size (square).
+    When no crop is given, ImageOps.fit() center-crops without distortion.
+    """
     if crop:
-        x = max(0, int(crop.get("x", 0)))
-        y = max(0, int(crop.get("y", 0)))
-        w = max(1, int(crop.get("width", img.width)))
-        h = max(1, int(crop.get("height", img.height)))
+        x  = max(0, int(crop.get("x", 0)))
+        y  = max(0, int(crop.get("y", 0)))
+        w  = max(1, int(crop.get("width",  img.width)))
+        h  = max(1, int(crop.get("height", img.height)))
         x2 = min(img.width,  x + w)
         y2 = min(img.height, y + h)
         img = img.crop((x, y, x2, y2))
-    img = img.resize(target_size, Image.LANCZOS)
+        img = img.resize(target_size, Image.LANCZOS)
+    else:
+        # No manual crop → center-crop to square without distorting
+        img = ImageOps.fit(img, target_size, Image.LANCZOS)
     return img
 
 
@@ -328,12 +334,13 @@ def upload(slot: str):
     save_path = UPLOAD_DIR / f"{slot}{ext}"
     f.save(str(save_path))
 
-    # Return a small preview
+    # Return a small preview — capture ORIGINAL dimensions before thumbnail shrinks them
     img = Image.open(str(save_path))
-    img.thumbnail((400, 400))
+    orig_w, orig_h = img.size          # original px, used by frontend for crop scaling
+    img.thumbnail((400, 400))          # modifies in-place
     preview_b64 = img_to_b64(img, fmt="JPEG", quality=80)
     return jsonify({"success": True, "preview": preview_b64,
-                    "width": img.width, "height": img.height})
+                    "width": orig_w, "height": orig_h})
 
 
 @app.route("/api/preview", methods=["POST"])

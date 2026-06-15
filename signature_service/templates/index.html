@@ -389,7 +389,7 @@
           <p>Drop headshot here or click to browse</p>
           <div class="filename" id="fname-head"></div>
         </div>
-        <div id="preview-head-wrap" class="hidden" style="text-align:center; margin-top:10px;">
+        <div id="preview-head-wrap" class="hidden" style="text-align:center; margin-top:10px; display: flex; flex-direction: column; align-items: center;">
           <div class="thumb-wrap">
             <img id="preview-head" src="" alt="headshot preview" />
             <button class="btn-clear" onclick="clearSlot('headshot')">✕</button>
@@ -564,8 +564,10 @@
 <script>
 // ── State ─────────────────────────────────────────────────────────────────
 const state = {
-  headshot_crop: null,      // {x,y,width,height} from Cropper.js
-  headshot_raw_src: null,   // original src for crop modal
+  headshot_crop: null,       // {x,y,width,height} in ORIGINAL image space
+  headshot_raw_src: null,    // base64 preview src used in crop modal
+  headshot_orig_w: null,     // original uploaded image width (for coord scaling)
+  headshot_orig_h: null,
 };
 let cropperInstance = null;
 
@@ -650,8 +652,10 @@ async function uploadFile(slot, file, previewImgId, previewWrapId, fnameId) {
   wrapEl.classList.remove("hidden");
 
   if (slot === "headshot") {
-    state.headshot_raw_src = src;
-    state.headshot_crop = null;
+    state.headshot_raw_src  = src;
+    state.headshot_orig_w   = data.width;    // original px before thumbnail
+    state.headshot_orig_h   = data.height;
+    state.headshot_crop     = null;
   }
   showToast(`${slot.charAt(0).toUpperCase()+slot.slice(1)} uploaded ✓`);
 }
@@ -762,24 +766,42 @@ async function doGenerate() {
 // ── Crop modal ────────────────────────────────────────────────────────────
 function openCropModal() {
   if (!state.headshot_raw_src) { showToast("Upload a headshot first", true); return; }
-  const modal = document.getElementById("crop-modal");
-  const cropImg = document.getElementById("crop-img");
-  cropImg.src = state.headshot_raw_src;
 
+  // Destroy any previous instance before touching the DOM
   if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
 
+  const modal  = document.getElementById("crop-modal");
+  const cropImg = document.getElementById("crop-img");
+
+  // Open modal first — Cropper needs the container to have real pixel dimensions
   modal.classList.add("open");
 
-  // Wait for image to load before initialising Cropper
-  cropImg.onload = () => {
+  // Reset src to "" so the browser always fires a fresh 'load' event,
+  // even if the same data URL is assigned again (avoids the race condition
+  // where .complete is true before the onload handler is registered).
+  cropImg.src = "";
+
+  function initCropper() {
+    // Guard: image must have real dimensions before Cropper touches it
+    if (!cropImg.naturalWidth) {
+      setTimeout(initCropper, 30);
+      return;
+    }
     cropperInstance = new Cropper(cropImg, {
-      aspectRatio: 1,      // square headshot
-      viewMode: 1,
+      aspectRatio: 1,        // 1:1 square crop
+      viewMode: 1,           // restrict crop box to image bounds
       autoCropArea: 0.85,
+      checkOrientation: false,
     });
-  };
-  // If already loaded
-  if (cropImg.complete) cropImg.onload();
+  }
+
+  cropImg.addEventListener("load", function onLoad() {
+    cropImg.removeEventListener("load", onLoad);
+    // Small delay so the modal's layout is fully painted before Cropper reads dimensions
+    setTimeout(initCropper, 60);
+  });
+
+  cropImg.src = state.headshot_raw_src;
 }
 
 function closeCropModal() {
@@ -789,30 +811,28 @@ function closeCropModal() {
 
 function applyCrop() {
   if (!cropperInstance) { closeCropModal(); return; }
-  const d = cropperInstance.getData(true); // rounded integers
-  // The server receives the crop relative to the ORIGINAL uploaded image.
-  // Cropper operates on the preview (resized to ≤400px).
-  // We store the ratio so the server can scale correctly.
-  // However, since we upload the original and the server has it, let's
-  // pass the canvas ratio.
-  const cropImg = document.getElementById("crop-img");
-  const naturalW = cropperInstance.getImageData().naturalWidth;
-  const displayW = cropperInstance.getImageData().width;
-  const scale = naturalW / displayW;
+
+  // getData(true) returns integers already in the natural (preview) image space —
+  // NOT in CSS-pixel space, so we must NOT multiply by naturalW/displayW again.
+  // We DO need to scale from preview space → original image space.
+  const d = cropperInstance.getData(true);
+  const previewNaturalW = cropperInstance.getImageData().naturalWidth;
+  const origW = state.headshot_orig_w || previewNaturalW;
+  const toOrig = origW / previewNaturalW;   // scale factor: preview px → original px
 
   state.headshot_crop = {
-    x: Math.round(d.x * scale),
-    y: Math.round(d.y * scale),
-    width:  Math.round(d.width  * scale),
-    height: Math.round(d.height * scale),
+    x:      Math.round(d.x      * toOrig),
+    y:      Math.round(d.y      * toOrig),
+    width:  Math.round(d.width  * toOrig),
+    height: Math.round(d.height * toOrig),
   };
 
-  // Show cropped thumbnail (square)
+  // Show square thumbnail in the sidebar
   const canvas = cropperInstance.getCroppedCanvas({ width: 200, height: 200 });
   document.getElementById("preview-head").src = canvas.toDataURL("image/jpeg");
 
   closeCropModal();
-  showToast("Crop applied ✓ — click Preview to update");
+  showToast("Crop aplicado ✓ — haz clic en Preview para actualizar");
 }
 
 // ── Keyboard shortcut ─────────────────────────────────────────────────────
