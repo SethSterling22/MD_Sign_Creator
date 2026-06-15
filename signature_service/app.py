@@ -294,6 +294,18 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/assets/<path:filename>")
+def serve_asset(filename: str):
+    """Serve files from the assets directory (icon, logo, fonts…)."""
+    return send_file(str(ASSETS_DIR / filename))
+
+
+@app.route("/favicon.ico")
+def favicon():
+    """Browsers request /favicon.ico automatically — serve the app icon."""
+    return send_file(str(ASSETS_DIR / "Icon.png"), mimetype="image/png")
+
+
 @app.route("/api/upload/<slot>", methods=["POST"])
 def upload(slot: str):
     """slot: signature | headshot | logo"""
