@@ -17,11 +17,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application files
 COPY signature_service .
 
-# Inform Docker that the container listens on port 5000 at runtime
-EXPOSE 5000
+# Inform Docker that the container listens on port 5050 at runtime
+EXPOSE 5050
 
-# Run the app with Gunicorn, binding to all interfaces on port 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# Run the app with Gunicorn, binding to all interfaces on port 5050
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "app:app"]
 
 # docker build -t flaskapp -f docker/Dockerfile .
-# docker run -d -p 5001:5050 --name running-flask-container flaskapp ./run.sh
+# docker run -d -p 5001:5050 --name running-flask-container flaskapp

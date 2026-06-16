@@ -25,7 +25,7 @@ MIN_REPLICAS=0                             # scale to zero when idle → $0 cost
 MAX_REPLICAS=1
 CPU="0.25"                                 # smallest available vCPU
 MEMORY="0.5Gi"                             # smallest available memory
-TARGET_PORT=5000                           # Gunicorn port inside the container
+TARGET_PORT=5050                           # Gunicorn port inside the container
 
 # ── Validate required env vars ────────────────────────────────────────────────
 : "${GITHUB_USERNAME:?Set GITHUB_USERNAME before running}"
