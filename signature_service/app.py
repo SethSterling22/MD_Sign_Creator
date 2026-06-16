@@ -204,8 +204,9 @@ def build_signature_image(data: dict) -> Image.Image:
         sig_raw = open_and_flatten(sig_path)
         sig_raw = apply_enhancements(
             sig_raw,
-            contrast=float(data.get("sig_contrast", 1.0)),
+            contrast=float(data.get("sig_contrast",    1.0)),
             brightness=float(data.get("sig_brightness", 1.0)),
+            saturation=float(data.get("sig_saturation", 1.0)),
         )
         ratio = min(SIG_MAX_W / sig_raw.width, SIG_MAX_H / sig_raw.height)
         nw, nh = int(sig_raw.width * ratio), int(sig_raw.height * ratio)

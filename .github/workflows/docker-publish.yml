@@ -1,4 +1,4 @@
-name: Build & Push Docker Image to GHCR
+name: Build, Push & Deploy
 
 on:
   push:
@@ -9,10 +9,13 @@ on:
       - main
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}   # → ghcr.io/sethsterling22/md_sign_creator
+  REGISTRY:       ghcr.io
+  IMAGE_NAME:     ${{ github.repository }}   # → ghcr.io/sethsterling22/md_sign_creator
+  RESOURCE_GROUP: md-sign-creator-rg
+  APP_NAME:       md-sign-creator
 
 jobs:
+  # ── Job 1: Build Docker image and push to GHCR ─────────────────────────────
   build-and-push:
     name: Build & Push
     runs-on: ubuntu-latest
@@ -20,6 +23,9 @@ jobs:
     permissions:
       contents: read
       packages: write   # required to push to GHCR
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}   # passed to deploy job
 
     steps:
       # ── 1. Checkout ─────────────────────────────────────────────────────────
@@ -49,13 +55,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # always tag latest on pushes to main
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # branch name (e.g. main)
             type=ref,event=branch
-            # short commit SHA  (e.g. sha-a1b2c3d)
             type=sha,prefix=sha-
-            # semantic version tags when a vX.Y.Z tag is pushed
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
@@ -65,11 +67,47 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
-          platforms: linux/amd64,linux/arm64   # native on M-series Macs too
-          # only push on real commits (not on PR dry-runs)
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # GHA layer cache — dramatically speeds up subsequent builds
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ── Job 2: Deploy to Azure Container Apps ──────────────────────────────────
+  deploy:
+    name: Deploy to Azure
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # Only deploy on real pushes to main, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      id-token: write   # required for OIDC login to Azure
+      contents: read
+
+    steps:
+      # ── 1. Azure login via OIDC (no stored passwords) ────────────────────────
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ── 2. Point Container App to the new image ──────────────────────────────
+      - name: Update Container App image
+        run: |
+          az containerapp update \
+            --name "${{ env.APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --image "ghcr.io/${{ github.repository }}:sha-${{ github.sha }}"
+
+      # ── 3. Print deployed URL ────────────────────────────────────────────────
+      - name: Print app URL
+        run: |
+          URL=$(az containerapp show \
+            --name "${{ env.APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "✅ Deployed → https://$URL"

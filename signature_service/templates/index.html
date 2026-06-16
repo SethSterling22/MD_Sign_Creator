@@ -376,6 +376,12 @@
           <span id="sig-brightness-val">1.00</span>
           <button class="btn-reset" onclick="resetRange('sig-brightness','sig-brightness-val',1)">↺</button>
         </div>
+        <div class="range-row">
+          <label>Saturation</label>
+          <input type="range" id="sig-saturation" min="0" max="2" step="0.05" value="1" />
+          <span id="sig-saturation-val">1.00</span>
+          <button class="btn-reset" onclick="resetRange('sig-saturation','sig-saturation-val',1)">↺</button>
+        </div>
       </div>
     </div>
 
@@ -590,6 +596,7 @@ function bindRange(id, valId) {
 }
 bindRange("sig-contrast",    "sig-contrast-val");
 bindRange("sig-brightness",  "sig-brightness-val");
+bindRange("sig-saturation",  "sig-saturation-val");
 bindRange("head-brightness", "head-brightness-val");
 bindRange("head-saturation", "head-saturation-val");
 
@@ -692,6 +699,7 @@ function getFormData() {
     // Image adjustments
     sig_contrast:        parseFloat(document.getElementById("sig-contrast").value),
     sig_brightness:      parseFloat(document.getElementById("sig-brightness").value),
+    sig_saturation:      parseFloat(document.getElementById("sig-saturation").value),
     headshot_crop:       state.headshot_crop,
     headshot_brightness: parseFloat(document.getElementById("head-brightness").value),
     headshot_saturation: parseFloat(document.getElementById("head-saturation").value),
