@@ -21,7 +21,7 @@ COPY signature_service .
 EXPOSE 5050
 
 # Run the app with Gunicorn, binding to all interfaces on port 5050
-CMD ["gunicorn", "--bind", "0.0.0.0:5050", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "1", "--timeout", "120", "--keep-alive", "5", "--forwarded-allow-ips", "*", "--preload", "app:app"]
 
 # docker build -t flaskapp -f docker/Dockerfile .
 # docker run -d -p 5001:5050 --name running-flask-container flaskapp
