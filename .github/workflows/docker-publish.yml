@@ -10,9 +10,9 @@ on:
 
 env:
   REGISTRY:       ghcr.io
-  IMAGE_NAME:     ${{ github.repository }}   # → ghcr.io/sethsterling22/md_sign_creator
-  RESOURCE_GROUP: md-sign-creator-rg
-  APP_NAME:       md-sign-creator
+  IMAGE_NAME:     sethsterling22/md_sign_creator   # lowercase required by GHCR
+  RESOURCE_GROUP: MD-signed
+  APP_NAME:       md-signature-creator
 
 jobs:
   # ── Job 1: Build Docker image and push to GHCR ─────────────────────────────
@@ -101,7 +101,7 @@ jobs:
           az containerapp update \
             --name "${{ env.APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image "ghcr.io/${{ github.repository }}:sha-${{ github.sha }}"
+            --image "ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image-tag }}"
 
       # ── 3. Print deployed URL ────────────────────────────────────────────────
       - name: Print app URL
