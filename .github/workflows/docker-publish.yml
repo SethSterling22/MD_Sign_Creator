@@ -11,9 +11,9 @@ on:
 env:
   REGISTRY:       ghcr.io
   IMAGE_NAME:     ${{ github.repository }}   # → ghcr.io/sethsterling22/md_sign_creator
-  RESOURCE_GROUP: md-sign-creator-rg
-  APP_NAME:       md-sign-creator
-
+  RESOURCE_GROUP: MD-signed
+  APP_NAME:       md-signature-creator
+  
 jobs:
   # ── Job 1: Build Docker image and push to GHCR ─────────────────────────────
   build-and-push:
