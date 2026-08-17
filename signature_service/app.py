@@ -137,6 +137,13 @@ def paste_rgba(canvas: Image.Image, overlay: Image.Image, pos: tuple):
     return canvas.convert("RGB")
 
 
+def parse_hex_color(value, default=(51, 51, 51)) -> tuple[int, int, int]:
+    """Convert a #RRGGBB form value to an RGB tuple, with a safe fallback."""
+    if isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+        return tuple(int(value[index:index + 2], 16) for index in (1, 3, 5))
+    return default
+
+
 # ─── Signature image builder ─────────────────────────────────────────────────
 
 def build_signature_image(data: dict) -> Image.Image:
@@ -150,6 +157,9 @@ def build_signature_image(data: dict) -> Image.Image:
       sig_contrast, sig_brightness
       headshot_crop   – {x,y,width,height} from Cropper.js, or null
       headshot_brightness, headshot_saturation
+      headshot_border_enabled – bool, draws a frame around the headshot
+      headshot_border_width   – frame width in px (default 2)
+      headshot_border_color   – frame color as #RRGGBB (default #333333)
       canvas_width    – total output width in px  (default 820)
       text_size       – base font size in px       (default 22)
       sig_max_w       – signature image max width  (default 300)
@@ -165,6 +175,9 @@ def build_signature_image(data: dict) -> Image.Image:
     SIG_MAX_W  = int(data.get("sig_max_w",  300))
     SIG_MAX_H  = int(data.get("sig_max_h",  130))
     HEAD_SIZE  = int(data.get("head_size",  210))   # square
+    HEAD_BORDER_ENABLED = data.get("headshot_border_enabled", True)
+    HEAD_BORDER_WIDTH = max(0, min(int(data.get("headshot_border_width", 2)), HEAD_SIZE // 2))
+    HEAD_BORDER_COLOR = parse_hex_color(data.get("headshot_border_color", "#333333"))
     LOGO_MAX_W = int(data.get("logo_max_w", 260))
     LOGO_MAX_H = int(data.get("logo_max_h", 100))
     TEXT_GAP   = max(4, int(TEXT_SIZE * 0.22))   # ~22% leading — tight but readable
@@ -264,6 +277,13 @@ def build_signature_image(data: dict) -> Image.Image:
     # Headshot
     if head_img:
         canvas = paste_rgba(canvas, head_img, (PAD, y))
+        if HEAD_BORDER_ENABLED and HEAD_BORDER_WIDTH:
+            # Draw inward so the overall headshot footprint and logo alignment stay unchanged.
+            ImageDraw.Draw(canvas).rectangle(
+                (PAD, y, PAD + HEAD_SIZE - 1, y + HEAD_SIZE - 1),
+                outline=HEAD_BORDER_COLOR,
+                width=HEAD_BORDER_WIDTH,
+            )
 
     # Logo – vertically centred next to headshot
     if logo_img:
