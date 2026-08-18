@@ -468,6 +468,13 @@
           <button class="btn-reset" onclick="resetRange('inp-head-size','inp-head-size-val',210)">↺</button>
         </div>
         <div class="range-row">
+          <label for="chk-head-border">Photo border</label>
+          <input type="checkbox" id="chk-head-border" checked style="width:auto;" />
+          <input type="range" id="inp-head-border-width" min="1" max="10" step="1" value="2" aria-label="Photo border width" />
+          <span id="inp-head-border-width-val">2</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <input type="color" id="inp-head-border-color" value="#333333" aria-label="Photo border color" style="width:30px; height:24px; padding:1px;" />
+        </div>
+        <div class="range-row">
           <label>Logo max width</label>
           <input type="range" id="inp-logo-w" min="100" max="400" step="10" value="260" />
           <span id="inp-logo-w-val">260</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
@@ -613,6 +620,7 @@ bindRangeInt("inp-text-size",  "inp-text-size-val");
 bindRangeInt("inp-sig-w",      "inp-sig-w-val");
 bindRangeInt("inp-sig-h",      "inp-sig-h-val");
 bindRangeInt("inp-head-size",  "inp-head-size-val");
+bindRangeInt("inp-head-border-width", "inp-head-border-width-val");
 bindRangeInt("inp-logo-w",     "inp-logo-w-val");
 bindRangeInt("inp-logo-h",     "inp-logo-h-val");
 
@@ -704,6 +712,9 @@ function getFormData() {
     headshot_crop:       state.headshot_crop,
     headshot_brightness: parseFloat(document.getElementById("head-brightness").value),
     headshot_saturation: parseFloat(document.getElementById("head-saturation").value),
+    headshot_border_enabled: document.getElementById("chk-head-border").checked,
+    headshot_border_width: parseInt(document.getElementById("inp-head-border-width").value),
+    headshot_border_color: document.getElementById("inp-head-border-color").value,
     // Layout & size
     canvas_width: parseInt(document.getElementById("inp-canvas-w").value) || 820,
     text_size:    parseInt(document.getElementById("inp-text-size").value),

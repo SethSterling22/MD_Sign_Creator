@@ -24,7 +24,7 @@ Clinical [Specialty], Expert Radiology™
 Board Certified, Diagnostic Radiology, American Board of Radiology   ← optional
 Fellowship trained in [Specialization], [University]
 
-[Headshot photo — square crop]           [Expert Radiology logo]
+[Headshot photo — square crop with an optional border] [Expert Radiology logo]
 ```
 
 ---
@@ -35,7 +35,7 @@ Fellowship trained in [Specialization], [University]
 |---|---|
 | **Form-based data entry** | Name, clinical title, specialization, university, board certification toggle |
 | **Signature upload** | Drag-and-drop; adjustable contrast & brightness sliders with reset buttons |
-| **Headshot upload** | Drag-and-drop with interactive **1:1 square crop** (Cropper.js) |
+| **Headshot upload** | Drag-and-drop with interactive **1:1 square crop** (Cropper.js) and an optional, adjustable border |
 | **Color adjustments** | Per-image brightness and saturation controls |
 | **Layout controls** | Canvas width, font size, and individual size sliders for every section |
 | **Default logo** | Expert Radiology logo auto-loaded from `assets/logo.png` — no prompt needed |
@@ -91,6 +91,9 @@ All `POST` endpoints that generate images accept a JSON body:
   "headshot_crop": { "x": 20, "y": 10, "width": 400, "height": 400 },
   "headshot_brightness": 1.0,
   "headshot_saturation": 1.1,
+  "headshot_border_enabled": true,
+  "headshot_border_width": 2,
+  "headshot_border_color": "#333333",
   "canvas_width": 820,
   "text_size": 22,
   "sig_max_w": 300,
