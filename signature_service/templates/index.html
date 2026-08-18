@@ -418,6 +418,21 @@
           <span id="head-saturation-val">1.00</span>
           <button class="btn-reset" onclick="resetRange('head-saturation','head-saturation-val',1)">↺</button>
         </div>
+        <hr class="divider" />
+        <div class="section-title">Border</div>
+        <div class="toggle-row">
+          <label class="switch">
+            <input type="checkbox" id="chk-head-border" />
+            <span class="slider"></span>
+          </label>
+          <label for="chk-head-border">Add black border</label>
+        </div>
+        <div class="range-row" id="head-border-width-row">
+          <label>Width</label>
+          <input type="range" id="head-border-width" min="1" max="10" step="1" value="2" />
+          <span id="head-border-width-val">2</span><span style="font-size:.75rem;color:var(--muted);"> px</span>
+          <button class="btn-reset" onclick="resetRange('head-border-width','head-border-width-val',2); updateHeadBorderControls()">↺</button>
+        </div>
       </div>
     </div>
 
@@ -615,6 +630,21 @@ bindRangeInt("inp-sig-h",      "inp-sig-h-val");
 bindRangeInt("inp-head-size",  "inp-head-size-val");
 bindRangeInt("inp-logo-w",     "inp-logo-w-val");
 bindRangeInt("inp-logo-h",     "inp-logo-h-val");
+bindRangeInt("head-border-width", "head-border-width-val");
+
+const headBorderToggle = document.getElementById("chk-head-border");
+const headBorderWidthRow = document.getElementById("head-border-width-row");
+function updateHeadBorderControls() {
+  const enabled = headBorderToggle.checked;
+  headBorderWidthRow.style.opacity = enabled ? "1" : ".5";
+  document.getElementById("head-border-width").disabled = !enabled;
+  document.getElementById("preview-head").style.border = enabled
+    ? `${document.getElementById("head-border-width").value}px solid black`
+    : "none";
+}
+headBorderToggle.addEventListener("change", updateHeadBorderControls);
+document.getElementById("head-border-width").addEventListener("input", updateHeadBorderControls);
+updateHeadBorderControls();
 
 function resetRange(rangeId, valId, defaultVal) {
   const el = document.getElementById(rangeId);
@@ -704,6 +734,8 @@ function getFormData() {
     headshot_crop:       state.headshot_crop,
     headshot_brightness: parseFloat(document.getElementById("head-brightness").value),
     headshot_saturation: parseFloat(document.getElementById("head-saturation").value),
+    headshot_border:     document.getElementById("chk-head-border").checked,
+    headshot_border_width: parseInt(document.getElementById("head-border-width").value),
     // Layout & size
     canvas_width: parseInt(document.getElementById("inp-canvas-w").value) || 820,
     text_size:    parseInt(document.getElementById("inp-text-size").value),

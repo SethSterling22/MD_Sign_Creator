@@ -150,6 +150,8 @@ def build_signature_image(data: dict) -> Image.Image:
       sig_contrast, sig_brightness
       headshot_crop   – {x,y,width,height} from Cropper.js, or null
       headshot_brightness, headshot_saturation
+      headshot_border – bool, adds a black border around the headshot
+      headshot_border_width – border thickness in px (default 2)
       canvas_width    – total output width in px  (default 820)
       text_size       – base font size in px       (default 22)
       sig_max_w       – signature image max width  (default 300)
@@ -165,6 +167,7 @@ def build_signature_image(data: dict) -> Image.Image:
     SIG_MAX_W  = int(data.get("sig_max_w",  300))
     SIG_MAX_H  = int(data.get("sig_max_h",  130))
     HEAD_SIZE  = int(data.get("head_size",  210))   # square
+    HEAD_BORDER = max(0, min(20, int(data.get("headshot_border_width", 2))))
     LOGO_MAX_W = int(data.get("logo_max_w", 260))
     LOGO_MAX_H = int(data.get("logo_max_h", 100))
     TEXT_GAP   = max(4, int(TEXT_SIZE * 0.22))   # ~22% leading — tight but readable
@@ -227,6 +230,8 @@ def build_signature_image(data: dict) -> Image.Image:
             brightness=float(data.get("headshot_brightness", 1.0)),
             saturation=float(data.get("headshot_saturation", 1.0)),
         )
+        if data.get("headshot_border", False) and HEAD_BORDER:
+            head_raw = ImageOps.expand(head_raw, border=HEAD_BORDER, fill=(0, 0, 0, 255))
         head_img = head_raw
 
     # ── logo (default from assets, override via upload)
@@ -240,7 +245,7 @@ def build_signature_image(data: dict) -> Image.Image:
 
     # ── calculate canvas height
     sig_h    = sig_img_resized.size[1] if sig_img_resized else 0
-    bottom_h = max(HEAD_SIZE if head_img else 0, logo_img.size[1] if logo_img else 0)
+    bottom_h = max(head_img.size[1] if head_img else 0, logo_img.size[1] if logo_img else 0)
     canvas_h = PAD + sig_h + 20 + TEXT_BLOCK_H + 30 + bottom_h + PAD
 
     # ── draw canvas
@@ -268,7 +273,7 @@ def build_signature_image(data: dict) -> Image.Image:
     # Logo – vertically centred next to headshot
     if logo_img:
         lw, lh = logo_img.size
-        logo_x = PAD + (HEAD_SIZE + 40 if head_img else 0)
+        logo_x = PAD + (head_img.size[0] + 40 if head_img else 0)
         logo_y = y + (bottom_h - lh) // 2
         canvas = paste_rgba(canvas, logo_img, (logo_x, logo_y))
 
