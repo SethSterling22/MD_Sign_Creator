@@ -145,6 +145,7 @@ def build_signature_image(data: dict) -> Image.Image:
       name            – full name including title (e.g. "Syed Adil Aftab, MD")
       title           – clinical specialty (e.g. "Neuroradiologist")
       board_certified – bool, adds the ABR line when True
+      fellowship_trained – bool, adds the fellowship line when True
       specialization  – fellowship specialization
       university      – training institution
       sig_contrast, sig_brightness
@@ -180,6 +181,7 @@ def build_signature_image(data: dict) -> Image.Image:
     name  = data.get("name", "Doctor Name").strip()
     title = data.get("title", "Radiologist").strip()
     board = data.get("board_certified", False)
+    fellowship = data.get("fellowship_trained", True)
     spec  = data.get("specialization", "Radiology").strip()
     univ  = data.get("university", "University").strip()
 
@@ -189,7 +191,8 @@ def build_signature_image(data: dict) -> Image.Image:
     ]
     if board:
         lines.append(("Board Certified, Diagnostic Radiology, American Board of Radiology", fn))
-    lines.append((f"Fellowship trained in {spec}, {univ}",            fn))
+    if fellowship:
+        lines.append((f"Fellowship trained in {spec}, {univ}",        fn))
 
     # ── measure text block height
     dummy = Image.new("RGB", (10, 10))
@@ -230,7 +233,7 @@ def build_signature_image(data: dict) -> Image.Image:
             brightness=float(data.get("headshot_brightness", 1.0)),
             saturation=float(data.get("headshot_saturation", 1.0)),
         )
-        if data.get("headshot_border", False) and HEAD_BORDER:
+        if data.get("headshot_border", True) and HEAD_BORDER:
             head_raw = ImageOps.expand(head_raw, border=HEAD_BORDER, fill=(0, 0, 0, 255))
         head_img = head_raw
 

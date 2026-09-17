@@ -102,6 +102,14 @@
     }
     input:focus { outline: none; border-color: var(--brand-blue); }
 
+    #fellowship-fields.disabled-fields { opacity: .55; }
+    #fellowship-fields.disabled-fields label { color: #9ca3af; }
+    #fellowship-fields.disabled-fields input {
+      background: #eef0f3;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+
     .toggle-row {
       display: flex;
       align-items: center;
@@ -333,14 +341,24 @@
           <label for="chk-board">Board Certified (Diagnostic Radiology, ABR)</label>
         </div>
 
-        <div class="field">
-          <label>Fellowship Specialization</label>
-          <input type="text" id="inp-spec" placeholder="Neuroradiology" value="Neuroradiology" />
+        <div class="toggle-row">
+          <label class="switch">
+            <input type="checkbox" id="chk-fellowship" checked />
+            <span class="slider"></span>
+          </label>
+          <label for="chk-fellowship">Fellowship Trained</label>
         </div>
 
-        <div class="field">
-          <label>University / Study Center</label>
-          <input type="text" id="inp-univ" placeholder="University of Puerto Rico Medical Center" value="" />
+        <div id="fellowship-fields">
+          <div class="field">
+            <label>Fellowship Specialization</label>
+            <input type="text" id="inp-spec" placeholder="Neuroradiology" value="Neuroradiology" />
+          </div>
+
+          <div class="field">
+            <label>University / Study Center</label>
+            <input type="text" id="inp-univ" placeholder="University of Puerto Rico Medical Center" value="" />
+          </div>
         </div>
 
       </div>
@@ -422,7 +440,7 @@
         <div class="section-title">Border</div>
         <div class="toggle-row">
           <label class="switch">
-            <input type="checkbox" id="chk-head-border" />
+            <input type="checkbox" id="chk-head-border" checked />
             <span class="slider"></span>
           </label>
           <label for="chk-head-border">Add black border</label>
@@ -559,6 +577,7 @@
         <em>Board Certified, Diagnostic Radiology, American Board of Radiology</em>
         <span style="color:var(--accent);"> ← only shown when toggle is ON</span><br>
         Fellowship trained in [Specialization], [University]
+        <span style="color:var(--accent);"> ← only shown when toggle is ON</span>
       </div>
     </div>
   </div><!-- end right column -->
@@ -646,6 +665,18 @@ headBorderToggle.addEventListener("change", updateHeadBorderControls);
 document.getElementById("head-border-width").addEventListener("input", updateHeadBorderControls);
 updateHeadBorderControls();
 
+const fellowshipToggle = document.getElementById("chk-fellowship");
+const fellowshipFields = document.getElementById("fellowship-fields");
+function updateFellowshipControls() {
+  const enabled = fellowshipToggle.checked;
+  fellowshipFields.classList.toggle("disabled-fields", !enabled);
+  fellowshipFields.querySelectorAll("input").forEach(input => {
+    input.disabled = !enabled;
+  });
+}
+fellowshipToggle.addEventListener("change", updateFellowshipControls);
+updateFellowshipControls();
+
 function resetRange(rangeId, valId, defaultVal) {
   const el = document.getElementById(rangeId);
   el.value = defaultVal;
@@ -725,6 +756,7 @@ function getFormData() {
     name:            document.getElementById("inp-name").value.trim(),
     title:           document.getElementById("inp-title").value.trim(),
     board_certified: document.getElementById("chk-board").checked,
+    fellowship_trained: document.getElementById("chk-fellowship").checked,
     specialization:  document.getElementById("inp-spec").value.trim(),
     university:      document.getElementById("inp-univ").value.trim(),
     // Image adjustments
