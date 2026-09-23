@@ -145,6 +145,7 @@ def build_signature_image(data: dict) -> Image.Image:
       name            – full name including title (e.g. "Syed Adil Aftab, MD")
       title           – clinical specialty (e.g. "Neuroradiologist")
       board_certified – bool, adds the ABR line when True
+      board_certification_text – custom certification line used when board_certified is False
       fellowship_trained – bool, adds the fellowship line when True
       specialization  – fellowship specialization
       university      – training institution
@@ -181,6 +182,7 @@ def build_signature_image(data: dict) -> Image.Image:
     name  = data.get("name", "Doctor Name").strip()
     title = data.get("title", "Radiologist").strip()
     board = data.get("board_certified", False)
+    board_text = data.get("board_certification_text", "").strip()
     fellowship = data.get("fellowship_trained", True)
     spec  = data.get("specialization", "Radiology").strip()
     univ  = data.get("university", "University").strip()
@@ -191,6 +193,8 @@ def build_signature_image(data: dict) -> Image.Image:
     ]
     if board:
         lines.append(("Board Certified, Diagnostic Radiology, American Board of Radiology", fn))
+    elif board_text:
+        lines.append((board_text, fn))
     if fellowship:
         lines.append((f"Fellowship trained in {spec}, {univ}",        fn))
 

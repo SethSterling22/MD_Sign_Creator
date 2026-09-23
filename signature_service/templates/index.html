@@ -102,9 +102,9 @@
     }
     input:focus { outline: none; border-color: var(--brand-blue); }
 
-    #fellowship-fields.disabled-fields { opacity: .55; }
-    #fellowship-fields.disabled-fields label { color: #9ca3af; }
-    #fellowship-fields.disabled-fields input {
+    .disabled-fields { opacity: .55; }
+    .disabled-fields label { color: #9ca3af; }
+    .disabled-fields input {
       background: #eef0f3;
       color: #9ca3af;
       cursor: not-allowed;
@@ -341,6 +341,16 @@
           <label for="chk-board">Board Certified (Diagnostic Radiology, ABR)</label>
         </div>
 
+        <div class="field" id="board-certification-field">
+          <label>Certification Line</label>
+          <input
+            type="text"
+            id="inp-board-certification"
+            placeholder="Enter a custom certification line (optional)"
+            value="Board Certified, Diagnostic Radiology, American Board of Radiology"
+          />
+        </div>
+
         <div class="toggle-row">
           <label class="switch">
             <input type="checkbox" id="chk-fellowship" checked />
@@ -574,8 +584,8 @@
       <div class="card-body" style="font-size:.88rem; color:var(--muted); line-height:1.7;">
         <strong style="color:var(--text);">[Name], MD</strong><br>
         Clinical [Title], Expert Radiology™<br>
-        <em>Board Certified, Diagnostic Radiology, American Board of Radiology</em>
-        <span style="color:var(--accent);"> ← only shown when toggle is ON</span><br>
+        <em>[Certification Line]</em>
+        <span style="color:var(--accent);"> ← standard ABR text when toggle is ON; editable when OFF</span><br>
         Fellowship trained in [Specialization], [University]
         <span style="color:var(--accent);"> ← only shown when toggle is ON</span>
       </div>
@@ -664,6 +674,17 @@ function updateHeadBorderControls() {
 headBorderToggle.addEventListener("change", updateHeadBorderControls);
 document.getElementById("head-border-width").addEventListener("input", updateHeadBorderControls);
 updateHeadBorderControls();
+
+const boardToggle = document.getElementById("chk-board");
+const boardCertificationField = document.getElementById("board-certification-field");
+const boardCertificationInput = document.getElementById("inp-board-certification");
+function updateBoardCertificationControls() {
+  const usesStandardText = boardToggle.checked;
+  boardCertificationField.classList.toggle("disabled-fields", usesStandardText);
+  boardCertificationInput.disabled = usesStandardText;
+}
+boardToggle.addEventListener("change", updateBoardCertificationControls);
+updateBoardCertificationControls();
 
 const fellowshipToggle = document.getElementById("chk-fellowship");
 const fellowshipFields = document.getElementById("fellowship-fields");
@@ -756,6 +777,7 @@ function getFormData() {
     name:            document.getElementById("inp-name").value.trim(),
     title:           document.getElementById("inp-title").value.trim(),
     board_certified: document.getElementById("chk-board").checked,
+    board_certification_text: document.getElementById("inp-board-certification").value.trim(),
     fellowship_trained: document.getElementById("chk-fellowship").checked,
     specialization:  document.getElementById("inp-spec").value.trim(),
     university:      document.getElementById("inp-univ").value.trim(),

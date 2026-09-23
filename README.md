@@ -21,7 +21,7 @@ A physician's signature block contains:
 
 [Full Name, MD]                          ← bold, user-defined title suffix
 Clinical [Specialty], Expert Radiology™
-Board Certified, Diagnostic Radiology, American Board of Radiology   ← optional
+[Certification line]                                                ← standard ABR text or custom text
 Fellowship trained in [Specialization], [University]                  ← optional toggle
 
 [Headshot photo — square crop]           [Expert Radiology logo]
@@ -33,7 +33,7 @@ Fellowship trained in [Specialization], [University]                  ← option
 
 | Feature | Details |
 |---|---|
-| **Form-based data entry** | Name, clinical title, specialization, university, board certification toggle, and fellowship toggle |
+| **Form-based data entry** | Name, clinical title, editable certification line, specialization, university, board certification toggle, and fellowship toggle |
 | **Signature upload** | Drag-and-drop; adjustable contrast & brightness sliders with reset buttons |
 | **Headshot upload** | Drag-and-drop with interactive **1:1 square crop** (Cropper.js) and an adjustable black border enabled by default |
 | **Color adjustments** | Per-image brightness and saturation controls |
@@ -84,6 +84,7 @@ All `POST` endpoints that generate images accept a JSON body:
   "name": "Syed Adil Aftab, MD",
   "title": "Neuroradiologist",
   "board_certified": true,
+  "board_certification_text": "Board Certified, Diagnostic Radiology, American Board of Radiology",
   "fellowship_trained": true,
   "specialization": "Neuroradiology",
   "university": "University of Chicago Medical Center",
